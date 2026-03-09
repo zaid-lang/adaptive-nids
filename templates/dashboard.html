@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Adaptive NIDS — Explainable Alerts</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #050a0f;
+    --surface:   #0b1520;
+    --border:    #1a2e40;
+    --accent:    #00d4ff;
+    --accent2:   #00ff9d;
+    --high:      #ff4757;
+    --medium:    #ffa502;
+    --low:       #ffdd59;
+    --text:      #c8dde8;
+    --dim:       #4a6070;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-ui:   'Exo 2', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Scanline overlay ─────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,212,255,0.015) 2px,
+      rgba(0,212,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ── Header ───────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #050a0f 0%, #0a1a28 100%);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 38px; height: 38px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 12px rgba(0,212,255,0.4);
+    animation: pulse-border 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 12px rgba(0,212,255,0.4); }
+    50%      { box-shadow: 0 0 24px rgba(0,212,255,0.8), 0 0 40px rgba(0,212,255,0.2); }
+  }
+  .logo-text h1 {
+    font-size: 1.1rem; font-weight: 700; letter-spacing: 0.15em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  .logo-text p {
+    font-size: 0.7rem; color: var(--dim); letter-spacing: 0.1em;
+    font-family: var(--font-mono);
+  }
+
+  .header-right {
+    display: flex; align-items: center; gap: 20px;
+  }
+  .live-indicator {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 0.75rem;
+    color: var(--accent2);
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent2);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; } 50% { opacity: 0.2; }
+  }
+  .refresh-info {
+    font-family: var(--font-mono); font-size: 0.7rem;
+    color: var(--dim);
+  }
+
+  /* ── Main Layout ──────────────────────────────── */
+  main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+
+  /* ── Stat Cards ───────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .stat-card::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .stat-card.total::after  { background: var(--accent); }
+  .stat-card.high::after   { background: var(--high); }
+  .stat-card.medium::after { background: var(--medium); }
+  .stat-card.low::after    { background: var(--low); }
+  .stat-card.top::after    { background: var(--accent2); }
+
+  .stat-label {
+    font-size: 0.65rem; letter-spacing: 0.15em; color: var(--dim);
+    text-transform: uppercase; font-family: var(--font-mono);
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-size: 2.2rem; font-weight: 900; line-height: 1;
+    font-family: var(--font-ui);
+  }
+  .stat-card.total  .stat-value { color: var(--accent); }
+  .stat-card.high   .stat-value { color: var(--high); }
+  .stat-card.medium .stat-value { color: var(--medium); }
+  .stat-card.low    .stat-value { color: var(--low); }
+  .stat-card.top    .stat-value { color: var(--accent2); font-size: 1rem; margin-top: 6px; word-break: break-all; }
+  .stat-sub {
+    font-size: 0.7rem; color: var(--dim); margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+
+  /* ── Two-column below stats ───────────────────── */
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 1100px) {
+    .grid-two { grid-template-columns: 1fr; }
+  }
+
+  /* ── Panel base ───────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+  }
+  .panel-title {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent);
+    font-family: var(--font-mono);
+  }
+  .panel-badge {
+    font-family: var(--font-mono); font-size: 0.65rem;
+    color: var(--dim); background: rgba(0,212,255,0.05);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  /* ── Attack Type Chart ────────────────────────── */
+  .attack-list { padding: 16px 20px; }
+  .attack-row { margin-bottom: 14px; }
+  .attack-meta {
+    display: flex; justify-content: space-between;
+    font-size: 0.75rem; margin-bottom: 5px;
+    font-family: var(--font-mono);
+  }
+  .attack-name { color: var(--text); }
+  .attack-count { color: var(--accent); }
+  .bar-track {
+    height: 6px; background: rgba(255,255,255,0.05);
+    border-radius: 3px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* ── Alerts Table ─────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  thead th {
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 0.62rem; letter-spacing: 0.15em;
+    color: var(--dim); font-family: var(--font-mono);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(26,46,64,0.5);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: rgba(0,212,255,0.04); }
+  tbody tr.new-row { animation: flash-in 0.6s ease; }
+  @keyframes flash-in {
+    0%   { background: rgba(0,212,255,0.12); }
+    100% { background: transparent; }
+  }
+  td {
+    padding: 11px 14px; vertical-align: middle;
+    font-family: var(--font-mono); color: var(--text);
+  }
+  td.ts    { color: var(--dim); font-size: 0.72rem; white-space: nowrap; }
+  td.ip    { color: var(--accent2); font-weight: 600; }
+  td.count { text-align: right; color: var(--text); }
+  td.limit { text-align: right; color: var(--dim); }
+
+  /* ── Severity Badge ───────────────────────────── */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 4px;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
+    font-family: var(--font-ui);
+  }
+  .badge.HIGH   { background: rgba(255,71,87,0.15);  color: var(--high);   border: 1px solid rgba(255,71,87,0.4); }
+  .badge.MEDIUM { background: rgba(255,165,2,0.15);  color: var(--medium); border: 1px solid rgba(255,165,2,0.4); }
+  .badge.LOW    { background: rgba(255,221,89,0.15); color: var(--low);    border: 1px solid rgba(255,221,89,0.4); }
+
+  /* ── Attack type pill ─────────────────────────── */
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 0.65rem; font-family: var(--font-ui); font-weight: 600;
+    letter-spacing: 0.06em;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--accent); white-space: nowrap;
+  }
+
+  /* ── Expand icon ──────────────────────────────── */
+  .expand-icon { color: var(--dim); font-size: 0.9rem; transition: transform 0.2s; }
+  tr.expanded .expand-icon { transform: rotate(90deg); color: var(--accent); }
+
+  /* ── Explanation row ──────────────────────────── */
+  .explanation-row td {
+    padding: 0;
+    background: rgba(0,20,35,0.8);
+    border-bottom: 1px solid var(--border);
+  }
+  .explanation-inner {
+    padding: 16px 20px 16px 40px;
+    display: none;
+  }
+  .explanation-inner.open { display: block; }
+  .expl-title {
+    font-size: 0.65rem; letter-spacing: 0.15em; color: var(--accent);
+    font-family: var(--font-mono); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .expl-text {
+    font-family: var(--font-mono); font-size: 0.77rem;
+    color: var(--text); line-height: 1.65;
+    max-width: 900px;
+    border-left: 2px solid var(--accent);
+    padding-left: 14px;
+  }
+  .expl-reason {
+    margin-top: 8px;
+    font-family: var(--font-mono); font-size: 0.7rem;
+    color: var(--dim);
+  }
+
+  /* ── Empty state ──────────────────────────────── */
+  .empty {
+    padding: 60px 20px; text-align: center;
+    font-family: var(--font-mono); color: var(--dim); font-size: 0.8rem;
+  }
+
+  /* ── Footer ───────────────────────────────────── */
+  footer {
+    text-align: center; padding: 20px;
+    font-family: var(--font-mono); font-size: 0.65rem;
+    color: var(--dim); border-top: 1px solid var(--border);
+    margin-top: 32px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡</div>
+    <div class="logo-text">
+      <h1>Adaptive NIDS</h1>
+      <p>Explainable Intrusion Detection System</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      LIVE MONITORING
+    </div>
+    <div class="refresh-info" id="refresh-info">Refreshing in 5s…</div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Stat Cards -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-label">Total Alerts</div>
+      <div class="stat-value" id="s-total">—</div>
+    </div>
+    <div class="stat-card high">
+      <div class="stat-label">High Severity</div>
+      <div class="stat-value" id="s-high">—</div>
+    </div>
+    <div class="stat-card medium">
+      <div class="stat-label">Medium Severity</div>
+      <div class="stat-value" id="s-medium">—</div>
+    </div>
+    <div class="stat-card low">
+      <div class="stat-label">Low Severity</div>
+      <div class="stat-value" id="s-low">—</div>
+    </div>
+    <div class="stat-card top">
+      <div class="stat-label">Top Offender IP</div>
+      <div class="stat-value" id="s-topip">—</div>
+      <div class="stat-sub" id="s-topip-count"></div>
+    </div>
+  </div>
+
+  <!-- Two-column: Alerts Table + Attack Breakdown -->
+  <div class="grid-two">
+
+    <!-- Alerts Table -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚠ Recent Alerts</span>
+        <span class="panel-badge" id="alert-count">Loading…</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Timestamp</th>
+              <th>Source IP</th>
+              <th>Attack Type</th>
+              <th style="text-align:right">Packets</th>
+              <th style="text-align:right">Limit</th>
+              <th>Severity</th>
+            </tr>
+          </thead>
+          <tbody id="alert-tbody">
+            <tr><td colspan="7" class="empty">Loading alerts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Attack Type Breakdown -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Attack Types</span>
+      </div>
+      <div class="attack-list" id="attack-list">
+        <div class="empty">Loading…</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  Adaptive NIDS v2.0 &nbsp;·&nbsp; Explainable Alerts Engine &nbsp;·&nbsp;
+  Click any alert row to see the full AI-generated explanation
+</footer>
+
+<!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+<script>
+const REFRESH = 5000; // ms
+let countdown = REFRESH / 1000;
+let knownIds = new Set();
+let expandedRows = new Set();
+
+// ── Fetch & render stats ─────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('s-total').textContent  = s.total;
+    document.getElementById('s-high').textContent   = s.high;
+    document.getElementById('s-medium').textContent = s.medium;
+    document.getElementById('s-low').textContent    = s.low;
+    document.getElementById('s-topip').textContent  = s.top_ip;
+    document.getElementById('s-topip-count').textContent = s.top_ip_count
+      ? `${s.top_ip_count} alerts` : '';
+
+    // Attack type bars
+    const maxCount = Math.max(...s.attack_types.map(a => a.count), 1);
+    const attackList = document.getElementById('attack-list');
+    if (s.attack_types.length === 0) {
+      attackList.innerHTML = '<div class="empty">No data yet</div>';
+      return;
+    }
+    attackList.innerHTML = s.attack_types.map(a => `
+      <div class="attack-row">
+        <div class="attack-meta">
+          <span class="attack-name">${a.type}</span>
+          <span class="attack-count">${a.count}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.round(a.count/maxCount*100)}%"></div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { console.warn('Stats error', e); }
+}
+
+// ── Fetch & render alerts ────────────────────────────────────────────────
+async function loadAlerts() {
+  try {
+    const r = await fetch('/api/alerts');
+    const alerts = await r.json();
+
+    document.getElementById('alert-count').textContent = `${alerts.length} alerts`;
+
+    if (alerts.length === 0) {
+      document.getElementById('alert-tbody').innerHTML =
+        '<tr><td colspan="7" class="empty">No alerts yet — system is monitoring…</td></tr>';
+      return;
+    }
+
+    const newIds = new Set(alerts.map(a => a.id));
+    const tbody = document.getElementById('alert-tbody');
+    tbody.innerHTML = '';
+
+    alerts.forEach(a => {
+      const isNew = !knownIds.has(a.id);
+      const isExpanded = expandedRows.has(a.id);
+
+      // Main row
+      const tr = document.createElement('tr');
+      if (isNew && knownIds.size > 0) tr.classList.add('new-row');
+      if (isExpanded) tr.classList.add('expanded');
+      tr.dataset.id = a.id;
+
+      tr.innerHTML = `
+        <td><span class="expand-icon">▶</span></td>
+        <td class="ts">${a.timestamp}</td>
+        <td class="ip">${a.source_ip}</td>
+        <td><span class="pill">${a.attack_type || 'Unknown'}</span></td>
+        <td class="count">${a.packet_count}</td>
+        <td class="limit">${a.threshold}</td>
+        <td><span class="badge ${a.severity}">${a.severity}</span></td>
+      `;
+      tr.addEventListener('click', () => toggleExplanation(a.id));
+      tbody.appendChild(tr);
+
+      // Explanation row (hidden by default, shown on click)
+      const exRow = document.createElement('tr');
+      exRow.classList.add('explanation-row');
+      exRow.dataset.for = a.id;
+      const explanation = a.explanation || 'No detailed explanation available.';
+      exRow.innerHTML = `
+        <td colspan="7">
+          <div class="explanation-inner${isExpanded ? ' open' : ''}" id="expl-${a.id}">
+            <div class="expl-title">🔍 Explainable Analysis — ${a.attack_type || 'Alert'}</div>
+            <div class="expl-text">${explanation}</div>
+            <div class="expl-reason">Detection rule: ${a.reason}</div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(exRow);
+    });
+
+    knownIds = newIds;
+  } catch(e) { console.warn('Alert error', e); }
+}
+
+// ── Toggle explanation panel ─────────────────────────────────────────────
+function toggleExplanation(id) {
+  const expl = document.getElementById(`expl-${id}`);
+  const row  = document.querySelector(`tr[data-id="${id}"]`);
+  if (!expl) return;
+  const open = expl.classList.toggle('open');
+  if (open) { expandedRows.add(id); row.classList.add('expanded'); }
+  else       { expandedRows.delete(id); row.classList.remove('expanded'); }
+}
+
+// ── Countdown timer ───────────────────────────────────────────────────────
+function tick() {
+  countdown--;
+  if (countdown <= 0) {
+    countdown = REFRESH / 1000;
+    loadStats();
+    loadAlerts();
+  }
+  document.getElementById('refresh-info').textContent = `Refreshing in ${countdown}s…`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadStats();
+loadAlerts();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
