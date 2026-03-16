@@ -11,8 +11,8 @@ SETUP (do this before running):
 
 # ═══════════════════════════════════════════════════════
 #  CONFIGURE THESE TWO LINES BEFORE RUNNING
-SERVER_URL = "https://adaptive-nids.up.railway.app"   # your Railway URL
-API_KEY    = "b0bf273dbcf15e9de9551d74f11f955228a3080ff3244339"            # from dashboard
+SERVER_URL = "https://your-app.up.railway.app"   # your Railway URL
+API_KEY    = "paste-your-api-key-here"            # from dashboard
 # ═══════════════════════════════════════════════════════
 
 TEST_MODE = False   # True = simulate attacks without real packets (for demo)
@@ -144,10 +144,17 @@ def packet_handler(packet):
         for p in range(20, 45): port_set["10.0.0.2"].add(p)
         packet_count["10.0.0.3"] += 300
 
+    # Skip loopback, multicast, broadcast — these are never real attacks
+    IGNORED_PREFIXES = ('127.', '224.', '239.', '255.', '0.')
+    if packet.haslayer(IP):
+        src = packet[IP].src
+        if any(src.startswith(p) for p in IGNORED_PREFIXES):
+            return
+
     if time.time() - start_time >= WINDOW:
         total = sum(packet_count.values())
         history.append(total)
-        threshold = (statistics.mean(history) * 1.5) if len(history) > 1 else 50
+        threshold = (statistics.mean(history) * 1.5) if len(history) > 1 else 200
 
         print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Window: {total} pkts | Threshold: {int(threshold)}")
 
