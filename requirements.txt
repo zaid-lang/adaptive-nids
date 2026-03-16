@@ -1,7 +1,4 @@
 flask==3.0.3
 gunicorn==22.0.0
-<<<<<<< HEAD
 requests==2.31.0
-=======
->>>>>>> 5a97ac6face6f284935d86cc171f2017e8ba8283
 scapy==2.5.0
