@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NIDS — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#050a0f;--surface:#0b1520;--border:#1a2e40;--accent:#00d4ff;--accent2:#00ff9d;--high:#ff4757;--text:#c8dde8;--dim:#4a6070;--font-mono:'Share Tech Mono',monospace;--font-ui:'Exo 2',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,0.012) 2px,rgba(0,212,255,0.012) 4px);pointer-events:none;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:#050a0f;position:sticky;top:0;z-index:100;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo h1{font-size:1rem;font-weight:700;letter-spacing:.2em;color:var(--high);text-transform:uppercase;}
+  .logo p{font-size:.65rem;color:var(--dim);font-family:var(--font-mono);}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .back-btn{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);text-decoration:none;border:1px solid rgba(0,212,255,.3);padding:5px 12px;border-radius:5px;}
+  a.logout{font-family:var(--font-mono);font-size:.68rem;color:var(--high);text-decoration:none;border:1px solid rgba(255,71,87,.3);padding:5px 12px;border-radius:5px;}
+  main{padding:28px 32px;max-width:1400px;margin:0 auto;}
+  .page-title{font-size:.7rem;letter-spacing:.2em;color:var(--high);font-family:var(--font-mono);text-transform:uppercase;margin-bottom:6px;}
+  .page-sub{font-size:.8rem;color:var(--dim);font-family:var(--font-mono);margin-bottom:28px;}
+  /* Stats row */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden;}
+  .stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .stat.s1::after{background:var(--accent);}
+  .stat.s2::after{background:var(--accent2);}
+  .stat.s3::after{background:var(--high);}
+  .stat-label{font-size:.6rem;letter-spacing:.15em;color:var(--dim);font-family:var(--font-mono);text-transform:uppercase;margin-bottom:8px;}
+  .stat-val{font-size:2rem;font-weight:900;color:var(--accent);}
+  .stat.s2 .stat-val{color:var(--accent2);}
+  .stat.s3 .stat-val{color:var(--high);}
+  /* Table */
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .panel-header{padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2);font-size:.68rem;letter-spacing:.18em;color:var(--accent);font-family:var(--font-mono);text-transform:uppercase;}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;}
+  thead th{padding:11px 16px;text-align:left;font-size:.6rem;letter-spacing:.15em;color:var(--dim);font-family:var(--font-mono);text-transform:uppercase;border-bottom:1px solid var(--border);background:rgba(0,0,0,.25);}
+  tbody tr{border-bottom:1px solid rgba(26,46,64,.5);transition:background .15s;}
+  tbody tr:hover{background:rgba(0,212,255,.04);}
+  td{padding:12px 16px;font-family:var(--font-mono);}
+  td.user{color:var(--accent2);font-weight:600;}
+  td.email{color:var(--text);}
+  td.key{color:var(--dim);font-size:.68rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  td.count{text-align:center;}
+  td.date{color:var(--dim);font-size:.72rem;}
+  .badge-count{display:inline-block;padding:2px 10px;border-radius:4px;font-size:.68rem;font-weight:700;}
+  .badge-count.has{background:rgba(0,255,157,.1);color:var(--accent2);border:1px solid rgba(0,255,157,.3);}
+  .badge-count.none{background:rgba(74,96,112,.1);color:var(--dim);border:1px solid rgba(74,96,112,.2);}
+  .you{display:inline-block;padding:1px 7px;border-radius:3px;font-size:.6rem;background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.2);margin-left:6px;}
+  footer{text-align:center;padding:20px;font-family:var(--font-mono);font-size:.62rem;color:var(--dim);border-top:1px solid var(--border);margin-top:32px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div>
+      <h1>🔐 Admin Panel</h1>
+      <p>Adaptive NIDS — User Management</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <a href="/dashboard" class="back-btn">← Dashboard</a>
+    <a href="/logout" class="logout">Logout</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">User Registry</div>
+  <div class="page-sub">All registered accounts and their monitoring activity</div>
+
+  <!-- Summary stats -->
+  <div class="stats">
+    <div class="stat s1">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-val">{{ users|length }}</div>
+    </div>
+    <div class="stat s2">
+      <div class="stat-label">Active (have alerts)</div>
+      <div class="stat-val">{{ users|selectattr('alert_count','gt',0)|list|length }}</div>
+    </div>
+    <div class="stat s3">
+      <div class="stat-label">Total Alerts</div>
+      <div class="stat-val">{{ users|sum(attribute='alert_count') }}</div>
+    </div>
+  </div>
+
+  <!-- Users table -->
+  <div class="panel">
+    <div class="panel-header">⚙ Registered Users — {{ users|length }} accounts</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>API Key</th>
+          <th style="text-align:center">Alerts</th>
+          <th>Last Alert</th>
+          <th>Registered</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="date">{{ u.id }}</td>
+          <td class="user">
+            {{ u.username }}
+            {% if u.id == current.id %}<span class="you">you</span>{% endif %}
+          </td>
+          <td class="email">{{ u.email }}</td>
+          <td class="key" title="{{ u.api_key }}">{{ u.api_key }}</td>
+          <td class="count">
+            <span class="badge-count {{ 'has' if u.alert_count > 0 else 'none' }}">
+              {{ u.alert_count }}
+            </span>
+          </td>
+          <td class="date">{{ u.last_alert or '—' }}</td>
+          <td class="date">{{ u.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer>Adaptive NIDS Admin Panel · Only accessible to {{ current.email }}</footer>
+</body>
+</html>

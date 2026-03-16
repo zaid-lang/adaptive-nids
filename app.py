@@ -299,3 +299,26 @@ sniff(filter="ip", prn=packet_handler, store=False)
         mimetype="text/x-python",
         headers={{"Content-Disposition": "attachment; filename=sniffer.py"}}
     )
+
+# ── Admin Panel ───────────────────────────────────────────────────────────────
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@nids.com")
+
+@app.route("/admin")
+def admin():
+    if not logged_in():
+        return redirect(url_for("login"))
+    user = current_user()
+    if user["email"] != ADMIN_EMAIL:
+        return "Access denied.", 403
+    conn = get_db()
+    users = conn.execute("""
+        SELECT u.id, u.username, u.email, u.created_at, u.api_key,
+               COUNT(a.id) as alert_count,
+               MAX(a.timestamp) as last_alert
+        FROM users u
+        LEFT JOIN alerts a ON a.user_id = u.id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC
+    """).fetchall()
+    conn.close()
+    return render_template("admin.html", users=[dict(u) for u in users], current=user)
