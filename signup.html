@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NIDS — Sign Up</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#050a0f;--surface:#0b1520;--border:#1a2e40;--accent:#00d4ff;--accent2:#00ff9d;--text:#c8dde8;--dim:#4a6070;--font-mono:'Share Tech Mono',monospace;--font-ui:'Exo 2',sans-serif;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,0.012) 2px,rgba(0,212,255,0.012) 4px);pointer-events:none;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:100%;max-width:440px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .logo{text-align:center;margin-bottom:32px;}
+  .logo-icon{font-size:2.2rem;display:block;margin-bottom:8px;}
+  .logo h1{font-size:1rem;font-weight:700;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;}
+  .logo p{font-size:.68rem;color:var(--dim);font-family:var(--font-mono);margin-top:4px;}
+  .field{margin-bottom:18px;}
+  label{display:block;font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);font-family:var(--font-mono);margin-bottom:6px;}
+  input{width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:var(--font-mono);font-size:.85rem;outline:none;transition:border-color .2s;}
+  input:focus{border-color:var(--accent);}
+  .btn{width:100%;padding:14px;background:linear-gradient(90deg,#0077aa,#00a88a);border:none;border-radius:8px;color:#fff;font-family:var(--font-ui);font-size:.9rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:6px;}
+  .btn:hover{opacity:.9;transform:translateY(-1px);}
+  .error{background:rgba(255,71,87,.12);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:12px 14px;font-family:var(--font-mono);font-size:.75rem;color:#ff4757;margin-bottom:18px;}
+  .note{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:12px 14px;font-family:var(--font-mono);font-size:.72rem;color:var(--dim);margin-bottom:18px;line-height:1.5;}
+  .note span{color:var(--accent);}
+  .footer-link{text-align:center;margin-top:22px;font-size:.75rem;color:var(--dim);font-family:var(--font-mono);}
+  .footer-link a{color:var(--accent);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <span class="logo-icon">🛡</span>
+    <h1>Create Account</h1>
+    <p>Adaptive NIDS — Register your network</p>
+  </div>
+  <div class="note">After signup, you'll receive an <span>API key</span> to connect your sniffer agent to this dashboard.</div>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="POST">
+    <div class="field">
+      <label>Username</label>
+      <input type="text" name="username" placeholder="yourname" required autofocus/>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" name="email" placeholder="you@example.com" required/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" required/>
+    </div>
+    <div class="field">
+      <label>Confirm Password</label>
+      <input type="password" name="password2" placeholder="••••••••" required/>
+    </div>
+    <button class="btn" type="submit">Create Account</button>
+  </form>
+  <div class="footer-link">Already registered? <a href="/login">Login here</a></div>
+</div>
+</body>
+</html>
