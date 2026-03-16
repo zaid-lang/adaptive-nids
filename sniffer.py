@@ -11,8 +11,8 @@ SETUP (do this before running):
 
 # ═══════════════════════════════════════════════════════
 #  CONFIGURE THESE TWO LINES BEFORE RUNNING
-SERVER_URL = "https://your-app.up.railway.app"   # your Railway URL
-API_KEY    = "paste-your-api-key-here"            # from dashboard
+SERVER_URL = "https://adaptive-nids.up.railway.app"   # your Railway URL
+API_KEY    = "b0bf273dbcf15e9de9551d74f11f955228a3080ff3244339"            # from dashboard
 # ═══════════════════════════════════════════════════════
 
 TEST_MODE = False   # True = simulate attacks without real packets (for demo)
