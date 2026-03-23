@@ -154,7 +154,7 @@ def packet_handler(packet):
     if time.time() - start_time >= WINDOW:
         total = sum(packet_count.values())
         history.append(total)
-        threshold = (statistics.mean(history) * 1.5) if len(history) > 1 else 200
+        threshold = (statistics.mean(history) * 1.5) if len(history) > 1 else 10
 
         print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Window: {total} pkts | Threshold: {int(threshold)}")
 
